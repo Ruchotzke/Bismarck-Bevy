@@ -1,0 +1,19 @@
+[package]
+name = "Bismarck_Bevy"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy = "0.15.1"
+bevy_2d_line = "0.1.4"
+poisson-diskus = "1.0.0"
+rand = "*"
+spade = "2.12.1"
+
+# Some optimization in debug mode
+[profile.dev]
+opt-level = 1
+
+# Extreme optimization for dependencies
+[profile.dev.package."*"]
+opt-level = 3
