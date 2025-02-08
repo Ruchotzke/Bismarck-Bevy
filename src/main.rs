@@ -55,14 +55,14 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
             thickness: 1.0,
         });
     }
-    for edge in &prov_data.province_connections {
-        let (a, b) = *edge;
-        let points = vec![a, b];
-        let colors = vec![ORANGE.into(), ORANGE.into()];
-        commands.spawn(Line {
-            points,
-            colors,
-            thickness: 1.0,
-        });
-    }
+    // for edge in &prov_data.province_connections {
+    //     let (a, b) = *edge;
+    //     let points = vec![a, b];
+    //     let colors = vec![ORANGE.into(), ORANGE.into()];
+    //     commands.spawn(Line {
+    //         points,
+    //         colors,
+    //         thickness: 1.0,
+    //     });
+    // }
 }
