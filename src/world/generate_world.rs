@@ -1,5 +1,5 @@
 use std::ops::Range;
-use bevy::prelude::{Commands, Entity, Res, Vec2};
+use bevy::prelude::*;
 use poisson_diskus::bridson;
 use spade::*;
 use crate::world::province::Province;
@@ -78,7 +78,7 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
 
     /* For future use, save the triangulation as a resource */
     commands.insert_resource(MapTriangulation{
-        triangulation: triangulation,
+        triangulation,
     });
 
     // /* Begin by converting all cities to points */
@@ -128,4 +128,32 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
     // }
     //
     // return data;
+}
+
+fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<MapTriangulation>) {
+
+    let mut vertices = graph.triangulation.vertices().collect::<Vec<_>>();
+    let mut provs = query.iter().collect::<Vec<_>>();
+
+    for (_, mut province) in &mut query{
+        /* Find the corresponding vertex in the triangulation */
+        let mut vertex = vertices.iter_mut().find(|v| v.data().pos == province.city ).unwrap();
+
+        /* Traverse vertex neighbors */
+        let mut neighbors = Vec::new();
+        for edge in vertex.out_edges() {
+            let dst = edge.to();
+            let p = dst.data().clone();
+            neighbors.push(p);
+        }
+
+        /* Convert Vec2 back into Entity and update */
+        for neighbor in neighbors {
+            /* Do a lookup for this specific neighbor */
+            let (e, p) = provs.iter().find(|&(e, p)| p.city == neighbor.pos).unwrap();
+
+            /* Add the entity to this province's neighbors */
+            province.neighboring_provinces.push(*e);
+        }
+    }
 }
