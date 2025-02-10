@@ -3,6 +3,7 @@ use bevy::prelude::{Commands, Entity, Res, Vec2};
 use poisson_diskus::bridson;
 use spade::*;
 use crate::world::province::Province;
+use crate::world::triangulation::{MapTriangulation, Point};
 use crate::world::world_config::WorldConfig;
 
 /// Generate some city center locations within a given area.
@@ -75,6 +76,11 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
         }
     }
 
+    /* For future use, save the triangulation as a resource */
+    commands.insert_resource(MapTriangulation{
+        triangulation: triangulation,
+    });
+
     // /* Begin by converting all cities to points */
     // let mut points: Vec<Point> = Vec::new();
     // for prov in provs{
@@ -122,16 +128,4 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
     // }
     //
     // return data;
-}
-
-struct Point {
-    pos: Vec2,
-}
-
-impl HasPosition for Point {
-    type Scalar = f32;
-
-    fn position(&self) -> Point2<Self::Scalar> {
-        Point2::new(self.pos.x, self.pos.y)
-    }
 }
