@@ -133,9 +133,12 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
 fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<MapTriangulation>) {
 
     let mut vertices = graph.triangulation.vertices().collect::<Vec<_>>();
-    let mut provs = query.iter().collect::<Vec<_>>();
+    let mut provs: Vec<(Entity, &Province)> = Vec::new();
+    for (e, p) in query.iter() {
+        provs.push((e, p));
+    }
 
-    for (_, mut province) in &mut query{
+    for (_, mut province) in &mut query.iter_mut() {
         /* Find the corresponding vertex in the triangulation */
         let mut vertex = vertices.iter_mut().find(|v| v.data().pos == province.city ).unwrap();
 
