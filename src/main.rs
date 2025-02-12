@@ -67,5 +67,21 @@ fn render_world(
                 thickness: 1.0,
             });
         }
+
+        /* Render the province neighbors */
+        // info!("Prov {} has {} neighbors.", prov.city, prov.neighboring_provinces.len());
+        for entity in prov.neighboring_provinces.iter() {
+            /* Grab the city from this entity */
+            let dst = prov_query.get(*entity).unwrap().city;
+
+            /* Render the line */
+            let points = vec![prov.city, dst];
+            let colors = vec![RED.into(), RED.into()];
+            commands.spawn(Line {
+                points,
+                colors,
+                thickness: 1.0,
+            });
+        }
     }
 }
