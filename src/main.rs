@@ -1,7 +1,7 @@
 mod world;
 mod rendering;
 
-use bevy::color::palettes::basic::{RED, WHITE};
+use bevy::color::palettes::basic::{WHITE};
 use bevy::color::palettes::css::BLACK;
 use bevy::prelude::*;
 use bevy_2d_line::{Line, LineRenderingPlugin};
@@ -9,9 +9,8 @@ use rand::Rng;
 use crate::world::generate_world::generate_provinces;
 use crate::world::province::Province;
 use crate::world::worldgen::WorldGen;
-use crate::rendering::{convex_polygon};
-use crate::rendering::convex_polygon::generate_convex_mesh;
-use crate::rendering::ordering::{order_verts, remove_duplicate_verts};
+use crate::world::city::City;
+use crate::world::neighbors::ProvinceNeighbors;
 
 fn main() {
     App::new()
@@ -26,8 +25,7 @@ fn main() {
 
         /* Systems */
         .add_systems(Startup, setup.after(generate_provinces))
-        .add_systems(Startup, remove_provs.after(setup))
-        .add_systems(Startup, render_world.after(remove_provs))
+        .add_systems(Startup, render_world.after(setup))
         // .add_systems(Startup, render_test)
 
         .run();
@@ -43,17 +41,17 @@ fn setup(mut commands: Commands) {
 
 fn render_world(
     mut commands: Commands,
-    prov_query: Query<&Province>,
+    prov_query: Query<(&Province, &City, &ProvinceNeighbors)>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>
 ) {
-    for prov in prov_query.iter() {
+    for (prov, city, neighbors) in prov_query.iter() {
         /* Render the city point */
         let city_color = Color::srgb(0.0, 0.0, 0.0);
         commands.spawn((
             Mesh2d(meshes.add(Circle::new(3.0))),
             MeshMaterial2d(materials.add(city_color)),
-            Transform::from_xyz(prov.city.x, prov.city.y, 5.0)
+            Transform::from_xyz(city.pos.x, city.pos.y, 5.0)
         ));
 
         /* Render the province area */
@@ -82,12 +80,12 @@ fn render_world(
         }
 
         /* Render the province neighbors */
-        for entity in prov.neighboring_provinces.iter() {
+        for entity in neighbors.prov_neighbors.iter() {
             /* Grab the city from this entity */
-            let dst = prov_query.get(*entity).unwrap().city;
+            let (_, dst, _) = prov_query.get(*entity).unwrap();
 
             /* Render the line */
-            let points = vec![prov.city, dst];
+            let points = vec![city.pos, dst.pos];
             let colors = vec![WHITE.into(), WHITE.into()];
             commands.spawn((Line {
                 points,

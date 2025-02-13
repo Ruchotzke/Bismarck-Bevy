@@ -2,7 +2,9 @@ use std::ops::Range;
 use bevy::prelude::*;
 use poisson_diskus::bridson;
 use spade::*;
-use crate::world::province::Province;
+use crate::world::city::City;
+use crate::world::neighbors::ProvinceNeighbors;
+use crate::world::province::{Province, ProvinceBundle};
 use crate::world::triangulation::{MapTriangulation, Point};
 use crate::world::world_config::WorldConfig;
 
@@ -38,12 +40,10 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
         triangulation.insert(Point{pos: point}).expect("Failed to insert point");
     }
 
-    /* Maintain a set of entities */
-    let mut provs: Vec<Entity> = Vec::new();
-
     /* Generate a province for each voronoi face */
     for cell in triangulation.voronoi_faces(){
         let mut edges = Vec::new();
+        let mut bad_prov = false;
         for edge in cell.adjacent_edges() {
             /* Unwrap if possible (may be an outer vertex */
             let mut bad = false;
@@ -59,20 +59,20 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
             if !bad {
                 edges.push((a,b));
             }
+            else {
+                bad_prov = true;
+                break;
+            }
         }
 
         /* If there are any edges, make a province */
-        if edges.len() > 0 {
+        if edges.len() > 0 && !bad_prov {
             /* Spawn the province */
-            let prov = Province{
-                city: Vec2::new(cell.as_delaunay_vertex().position().x, cell.as_delaunay_vertex().position().y),
-                borders: edges,
-                neighboring_provinces: vec![],
-            };
-            let entity = commands.spawn(
-                prov
-            );
-            provs.push(entity.id());
+            commands.spawn(ProvinceBundle {
+                city: City::new(cell.as_delaunay_vertex().position().x, cell.as_delaunay_vertex().position().y),
+                neighbors: ProvinceNeighbors::new(),
+                geography: Province::new(edges),
+            });
         }
     }
 
@@ -82,14 +82,14 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
     });
 }
 
-pub fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<MapTriangulation>) {
+pub fn connect_provinces(mut query: Query<(Entity, &Province, &City, &mut ProvinceNeighbors)>, graph: Res<MapTriangulation>) {
     /* Save all of the provinces and vertices */
-    let provs: Vec<(Entity, Mut<Province>)> = query.iter_mut().collect();
+    let provs: Vec<(Entity, &Province, &City, Mut<ProvinceNeighbors>)> = query.iter_mut().collect();
 
     /* Collect all cities, maintaining order */
     let mut cities: Vec<Vec2> = Vec::new();
-    for (_, p) in &provs {
-        cities.push(p.city.clone());
+    for (_, _, c, _) in &provs {
+        cities.push(c.pos.clone());
     }
 
     /* Get the mapping from city to a list of vec2 neighbors */
@@ -100,20 +100,30 @@ pub fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<M
     for (city, vecs) in tmp_store {
         let mut neighbors = Vec::new();
         for v in vecs.iter() {
-            let (e, _) = provs.iter().find(|&(_, p)| p.city == *v).unwrap();
-            neighbors.push(*e);
+            match provs.iter().find(|&(_, _, c, _)| c.pos == *v) {
+                None => {
+                    /* This neighbor was removed */
+                    continue;
+                }
+                Some(v) => {
+                    /* We found a neighbor, apply it */
+                    let (e, _, _, _) = v;
+                    neighbors.push(*e);
+                }
+            }
+
         }
         tmp_entities.push((city, neighbors));
     }
 
     /* Now update each province with its corresponding neighboring entities */
-    for (_, mut p) in provs {
+    for (_, _, c, mut p) in provs {
         /* Find the correct province mapping */
-        let (_, ents) = tmp_entities.iter().find(|(city, _)| *city == p.city).unwrap();
+        let (_, ents) = tmp_entities.iter().find(|(city, _)| *city == c.pos).unwrap();
 
         /* Update the province */
         for e in ents {
-            p.neighboring_provinces.push(*e);
+            p.prov_neighbors.push(*e);
         }
     }
 }

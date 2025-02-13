@@ -1,5 +1,7 @@
 pub mod province;
 pub mod generate_world;
 pub mod worldgen;
-mod world_config;
-mod triangulation;
+pub mod world_config;
+pub mod triangulation;
+pub mod city;
+pub mod neighbors;
