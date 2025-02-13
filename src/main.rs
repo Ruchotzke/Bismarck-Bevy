@@ -1,6 +1,6 @@
 mod world;
 
-use bevy::color::palettes::basic::RED;
+use bevy::color::palettes::basic::{RED, WHITE};
 use bevy::prelude::*;
 use bevy_2d_line::{Line, LineRenderingPlugin};
 use crate::world::generate_world::generate_provinces;
@@ -28,17 +28,6 @@ fn main() {
 fn setup(mut commands: Commands) {
     /* Set up a camera */
     commands.spawn(Camera2d);
-
-    // for edge in &prov_data.province_connections {
-    //     let (a, b) = *edge;
-    //     let points = vec![a, b];
-    //     let colors = vec![ORANGE.into(), ORANGE.into()];
-    //     commands.spawn(Line {
-    //         points,
-    //         colors,
-    //         thickness: 1.0,
-    //     });
-    // }
 }
 
 fn render_world(
@@ -69,14 +58,14 @@ fn render_world(
         }
 
         /* Render the province neighbors */
-        // info!("Prov {} has {} neighbors.", prov.city, prov.neighboring_provinces.len());
+        info!("Prov {} has {} neighbors.", prov.city, prov.neighboring_provinces.len());
         for entity in prov.neighboring_provinces.iter() {
             /* Grab the city from this entity */
             let dst = prov_query.get(*entity).unwrap().city;
 
             /* Render the line */
             let points = vec![prov.city, dst];
-            let colors = vec![RED.into(), RED.into()];
+            let colors = vec![WHITE.into(), WHITE.into()];
             commands.spawn(Line {
                 points,
                 colors,

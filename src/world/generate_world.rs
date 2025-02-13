@@ -80,79 +80,37 @@ pub fn generate_provinces(mut commands: Commands, config: Res<WorldConfig>) {
     commands.insert_resource(MapTriangulation{
         triangulation,
     });
-
-    // /* Begin by converting all cities to points */
-    // let mut points: Vec<Point> = Vec::new();
-    // for prov in provs{
-    //     points.push(Point{pos: *prov.city.center });
-    // }
-    //
-    // /* Generate the triangulation generator*/
-    // let mut triangulation: DelaunayTriangulation<Point> = DelaunayTriangulation::new();
-    //
-    // /* Add points */
-    // for point in points{
-    //     triangulation.insert(point).expect("PANIC");
-    // }
-    //
-    // /* First, grab all information related to pathfinding */
-    // let mut data = ProvinceData{
-    //     province_borders: Vec::new(),
-    //     province_connections: Vec::new(),
-    // };
-    //
-    // /* Return connections between provinces */
-    // for edge in triangulation.undirected_edges(){
-    //     let a = edge.vertices()[0].data().pos;
-    //     let b = edge.vertices()[1].data().pos;
-    //     data.province_connections.push((a, b));
-    // }
-    //
-    // /* Return all edges */
-    // for cell in triangulation.voronoi_faces(){
-    //     for edge in cell.adjacent_edges() {
-    //         /* Unwrap if possible (may be an outer vertex */
-    //         let mut bad = false;
-    //         let a: Vec2 = match edge.from().position() {
-    //             None => {bad = true; Vec2::ZERO},
-    //             Some(v) => {Vec2::new(v.x, v.y)}
-    //         };
-    //         let b: Vec2 = match edge.to().position() {
-    //             None => {bad = true; Vec2::ZERO},
-    //             Some(v) => {Vec2::new(v.x, v.y)}
-    //         };
-    //         if !bad {
-    //             data.province_borders.push((a, b));
-    //         }
-    //     }
-    // }
-    //
-    // return data;
 }
 
-fn connect_provinces<'a>(mut query: Query<'a, 'a, (Entity, &'a mut Province)>, graph: Res<MapTriangulation>) {
+pub fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<MapTriangulation>) {
     /* Save all of the provinces and vertices */
-    // let mut vertices = graph.triangulation.vertices().collect::<Vec<_>>();
     let provs: Vec<(Entity, Mut<Province>)> = query.iter_mut().collect();
 
-    /* Get the mapping from province to a list of vec2 neighbors */
-    let tmp_store = get_prov_neighbors(&provs, graph);
+    /* Collect all cities, maintaining order */
+    let mut cities: Vec<Vec2> = Vec::new();
+    for (_, p) in &provs {
+        cities.push(p.city.clone());
+    }
+
+    /* Get the mapping from city to a list of vec2 neighbors */
+    let tmp_store = get_prov_neighbors(&cities, graph);
 
     /* Convert Vec2 into entity */
-    let mut tmp_entities: Vec<(&Province, Vec<Entity>)> = Vec::new();
-    for (prov, vecs) in tmp_store {
+    let mut tmp_entities: Vec<(Vec2, Vec<Entity>)> = Vec::new();
+    for (city, vecs) in tmp_store {
         let mut neighbors = Vec::new();
         for v in vecs.iter() {
             let (e, _) = provs.iter().find(|&(_, p)| p.city == *v).unwrap();
             neighbors.push(*e);
         }
-        tmp_entities.push((prov, neighbors));
+        info!("City {} has {} neighbors.", city, neighbors.len());
+        tmp_entities.push((city, neighbors));
     }
 
     /* Now update each province with its corresponding neighboring entities */
     for (_, mut p) in provs {
         /* Find the correct province mapping */
-        let (_, ents) = tmp_entities.iter().find(|(prov, _)| prov.city == p.city).unwrap();
+        let (_, ents) = tmp_entities.iter().find(|(city, _)| *city == p.city).unwrap();
 
         /* Update the province */
         for e in ents {
@@ -163,15 +121,15 @@ fn connect_provinces<'a>(mut query: Query<'a, 'a, (Entity, &'a mut Province)>, g
 
 
 /// Map a province to its neighboring cities (helper)
-fn get_prov_neighbors<'a>(provs: &'a Vec<(Entity, Mut<Province>)>, graph: Res<MapTriangulation>) -> Vec<(&'a Province, Vec<Vec2>)> {
+fn get_prov_neighbors(cities: &Vec<Vec2>, graph: Res<MapTriangulation>) -> Vec<(Vec2, Vec<Vec2>)> {
     /* Create a read-only mapping to store neighbors temporarily */
-    let mut tmp_store: Vec<(&Province, Vec<Vec2>)> = Vec::new();
+    let mut tmp_store: Vec<(Vec2, Vec<Vec2>)> = Vec::new();
     let mut vertices = graph.triangulation.vertices().collect::<Vec<_>>();
 
     /* Compute neighbors */
-    for (_, ref province) in provs.iter() {
+    for city in cities.iter() {
         /* Find the corresponding vertex in the triangulation */
-        let vertex = vertices.iter_mut().find(|v| v.data().pos == province.city).unwrap();
+        let vertex = vertices.iter_mut().find(|v| v.data().pos == *city).unwrap();
 
         /* Traverse vertex neighbors */
         let mut neighbors = Vec::new();
@@ -181,7 +139,7 @@ fn get_prov_neighbors<'a>(provs: &'a Vec<(Entity, Mut<Province>)>, graph: Res<Ma
         }
 
         /* Store neighbors */
-        tmp_store.push((province, neighbors));
+        tmp_store.push((city.clone(), neighbors));
     }
     return tmp_store;
 }
