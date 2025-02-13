@@ -26,7 +26,8 @@ fn main() {
 
         /* Systems */
         .add_systems(Startup, setup.after(generate_provinces))
-        .add_systems(Startup, render_world.after(setup))
+        .add_systems(Startup, remove_provs.after(setup))
+        .add_systems(Startup, render_world.after(remove_provs))
         // .add_systems(Startup, render_test)
 
         .run();
@@ -34,7 +35,10 @@ fn main() {
 
 fn setup(mut commands: Commands) {
     /* Set up a camera */
-    commands.spawn(Camera2d);
+    commands.spawn((
+        Camera2d::default(),
+        Transform::from_scale(Vec3::new(2.0, 2.0, 2.0)), // Zooms in (values < 1.0)
+    ));
 }
 
 fn render_world(
@@ -49,7 +53,7 @@ fn render_world(
         commands.spawn((
             Mesh2d(meshes.add(Circle::new(3.0))),
             MeshMaterial2d(materials.add(city_color)),
-            Transform::from_xyz(prov.city.x, prov.city.y, 1.0)
+            Transform::from_xyz(prov.city.x, prov.city.y, 5.0)
         ));
 
         /* Render the province area */
@@ -85,36 +89,12 @@ fn render_world(
             /* Render the line */
             let points = vec![prov.city, dst];
             let colors = vec![WHITE.into(), WHITE.into()];
-            commands.spawn(Line {
+            commands.spawn((Line {
                 points,
                 colors,
                 thickness: 1.0,
-            });
+            }, Transform::from_xyz(0.0, 0.0, 1.0))
+            );
         }
     }
 }
-
-// fn render_test(mut commands: Commands,
-//                mut meshes: ResMut<Assets<Mesh>>,
-//                mut materials: ResMut<Assets<ColorMaterial>>) {
-//
-//     /* Spawn a new mesh */
-//     let color = Color::srgb(1.0, 1.0, 0.0);
-//     let verts = vec![
-//         Vec2::new(0.0, 0.0),
-//         Vec2::new(100.0, 0.0),
-//         Vec2::new(45.9, 45.9),
-//         Vec2::new(0.0, 100.0),
-//         Vec2::new(-70.0, 80.0),
-//         Vec2::new(-90.0, 20.0),
-//     ];
-//     let verts = remove_duplicate_verts(verts);
-//     commands.spawn((
-//         Mesh2d(meshes.add(generate_convex_mesh(
-//             verts,
-//         ).unwrap())
-//         ),
-//         MeshMaterial2d(materials.add(color)),
-//         Transform::from_xyz(0.0, 0.0, 0.0)
-//     ));
-// }
