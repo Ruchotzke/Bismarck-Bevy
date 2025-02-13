@@ -103,7 +103,6 @@ pub fn connect_provinces(mut query: Query<(Entity, &mut Province)>, graph: Res<M
             let (e, _) = provs.iter().find(|&(_, p)| p.city == *v).unwrap();
             neighbors.push(*e);
         }
-        info!("City {} has {} neighbors.", city, neighbors.len());
         tmp_entities.push((city, neighbors));
     }
 
