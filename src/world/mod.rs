@@ -5,3 +5,4 @@ pub mod world_config;
 pub mod triangulation;
 pub mod city;
 pub mod neighbors;
+pub mod edge_marker;
