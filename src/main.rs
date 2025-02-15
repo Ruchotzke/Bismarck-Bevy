@@ -1,34 +1,49 @@
 mod world;
 mod rendering;
+mod pops;
+mod scheduling;
 
 use bevy::color::palettes::basic::{WHITE};
 use bevy::color::palettes::css::BLACK;
 use bevy::prelude::*;
 use bevy_2d_line::{Line, LineRenderingPlugin};
 use rand::Rng;
-use crate::world::generate_world::generate_provinces;
 use crate::world::province::Province;
-use crate::world::worldgen::WorldGen;
+use crate::world::worldgen::{conclude_worldgen, WorldGen};
 use crate::world::city::City;
-use crate::world::edge_marker::{mark_edge_provs, EdgeMarker};
 use crate::world::neighbors::ProvinceNeighbors;
+use bevy::app::Startup;
+use crate::pops::pop_manager::PopManagement;
+use crate::scheduling::startup_schedule::StartupSchedule;
 
 fn main() {
-    App::new()
-        .insert_resource(ClearColor(Color::srgb(0.1, 0.0, 0.15)))
+    /* Generate the app */
+    let mut app = App::new();
 
-        /* Third party plugins */
-        .add_plugins(DefaultPlugins)
-        .add_plugins(LineRenderingPlugin)
+    /* Configure subschedule sets */
+    app.configure_sets(Startup,
+                       (
+                           StartupSchedule::WorldGeneration,
+                           StartupSchedule::PopulationInitialization
+                       ).chain());
 
-        /* Custom plugins */
-        .add_plugins(WorldGen)
+    /* Third party plugins */
+    app.add_plugins(DefaultPlugins)
+    .add_plugins(LineRenderingPlugin);
 
-        /* Systems */
-        .add_systems(Startup, setup.after(generate_provinces))
-        .add_systems(Startup, (mark_edge_provs, remove_ugly_edges, render_world).chain().after(setup))
+    /* Custom plugins */
+    app.add_plugins(WorldGen)
+    .add_plugins(PopManagement);
 
-        .run();
+    /* Systems */
+    app.add_systems(Startup, setup)
+    .add_systems(Startup, (render_world).chain().after(conclude_worldgen));
+
+    /* Resources */
+    app.insert_resource(ClearColor(Color::srgb(0.1, 0.0, 0.15)));
+
+    /* Run the app */
+    app.run();
 }
 
 fn setup(mut commands: Commands) {
@@ -95,38 +110,4 @@ fn render_world(
             );
         }
     }
-}
-
-fn remove_ugly_edges(
-    mut commands: Commands,
-    mut params: ParamSet<(
-        Query<(Entity, &ProvinceNeighbors, &EdgeMarker)>,
-        Query<&mut ProvinceNeighbors>
-    )>
-){
-    /* First find all entities we want to remove */
-    let mut to_remove = Vec::new();
-    let binding = params.p0();
-    let all = binding.iter().collect::<Vec<_>>();
-    for (e, _, _) in all {
-        to_remove.push(e);
-    }
-
-    /* Now iterate through all neighbor structs and remove that entity */
-    for check in &to_remove {
-        for mut province in params.p1().iter_mut() {
-            for i in 0..province.prov_neighbors.len() {
-                if province.prov_neighbors[i] == *check {
-                    province.prov_neighbors.remove(i);
-                    break;
-                }
-            }
-        }
-    }
-
-    /* Fully delete the entity */
-    for r in to_remove {
-        commands.entity(r).despawn();
-    }
-
 }
