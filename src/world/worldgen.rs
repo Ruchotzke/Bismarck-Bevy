@@ -1,4 +1,3 @@
-use bevy::ecs::schedule::ScheduleLabel;
 use bevy::prelude::*;
 use crate::scheduling::startup_schedule::StartupSchedule;
 use crate::world::edge_marker::{mark_edge_provs, EdgeMarker};
@@ -7,10 +6,6 @@ use crate::world::neighbors::ProvinceNeighbors;
 use crate::world::world_config::WorldConfig;
 
 pub struct WorldGen;
-
-/// The world generation schedule label (to ensure it runs early)
-#[derive(ScheduleLabel, Debug, Clone, PartialEq, Eq, Hash)]
-pub struct InitWorldSched;
 
 impl Plugin for WorldGen {
     fn build(&self, app: &mut App) {

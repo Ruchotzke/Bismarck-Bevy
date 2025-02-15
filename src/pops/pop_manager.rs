@@ -1,6 +1,8 @@
 use bevy::prelude::*;
 use crate::scheduling::startup_schedule::StartupSchedule;
 use crate::world::city::City;
+use rand::seq::IteratorRandom;
+use crate::pops::pop::Pop;
 
 /// The plugin for managing populations.
 pub struct PopManagement;
@@ -18,6 +20,13 @@ impl Plugin for PopManagement {
 
 pub fn initialize_pops(mut commands: Commands, query: Query<(Entity, &City)>){
     /* Add a population to the zero'th province. */
-    info!("Initializing population!");
+    let (entity, _) = query.iter().choose(&mut rand::rng()).unwrap();
+
+    commands.spawn(
+        Pop{
+            size: 500,
+            home: entity,
+        },
+    );
 }
 
