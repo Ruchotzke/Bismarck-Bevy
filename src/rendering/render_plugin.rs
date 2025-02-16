@@ -2,6 +2,7 @@ use bevy::color::palettes::basic::{BLACK, WHITE};
 use bevy::prelude::*;
 use bevy_2d_line::Line;
 use rand::Rng;
+use crate::rendering::map_views::map_view_state::MapModeState;
 use crate::rendering::map_views::pop_density::render_pop_density;
 use crate::scheduling::startup_schedule::StartupSchedule;
 use crate::world::city::City;
@@ -12,13 +13,19 @@ pub struct RenderPlugin;
 
 impl Plugin for RenderPlugin {
     fn build(&self, app: &mut App) {
+        /* State */
+        app.init_state::<MapModeState>();
+
+        /* Systems */
         app.add_systems(Startup,
                         (
                             construct_render_assets
                         )
                             .chain()
                             .in_set(StartupSchedule::RenderInitialization));
-        app.add_systems(Update, render_pop_density);
+        app.add_systems(Update, render_pop_density.run_if(in_state(MapModeState::PopulationDensity)));
+        app.add_systems(Update, adjust_color.run_if(in_state(MapModeState::Flat)));
+        app.add_systems(OnEnter(MapModeState::Flat), regen_random_color);
     }
 }
 
@@ -97,6 +104,17 @@ fn adjust_color(mut materials: ResMut<Assets<ColorMaterial>>,
     for handle in query.iter() {
         if let Some(material) = materials.get_mut(handle) {
             material.color = material.color.rotate_hue(time.delta_secs() * 100.0);
+        }
+    }
+}
+
+fn regen_random_color(mut materials: ResMut<Assets<ColorMaterial>>,
+                      query: Query<&MeshMaterial2d<ColorMaterial>, With<City>>,
+) {
+    for handle in query.iter() {
+        if let Some(material) = materials.get_mut(handle) {
+            let rand_color = Color::hsv(rand::rng().random_range(0.0..360.0), 1.0, 1.0);
+            material.color = rand_color;
         }
     }
 }

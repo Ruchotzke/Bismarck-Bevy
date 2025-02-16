@@ -2,11 +2,13 @@ mod world;
 mod rendering;
 mod pops;
 mod scheduling;
+mod input_management;
 
 use bevy::prelude::*;
 use bevy_2d_line::{LineRenderingPlugin};
 use crate::world::worldgen::{WorldGen};
 use bevy::app::Startup;
+use crate::input_management::input_manager::InputManager;
 use crate::pops::pop_manager::PopManagement;
 use crate::rendering::render_plugin::RenderPlugin;
 use crate::scheduling::startup_schedule::StartupSchedule;
@@ -30,7 +32,8 @@ fn main() {
     /* Custom plugins */
     app.add_plugins(WorldGen)
     .add_plugins(PopManagement)
-    .add_plugins(RenderPlugin);
+    .add_plugins(RenderPlugin)
+    .add_plugins(InputManager);
 
     /* Resources */
     app.insert_resource(ClearColor(Color::srgb(0.1, 0.0, 0.15)));

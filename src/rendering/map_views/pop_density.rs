@@ -13,9 +13,9 @@ pub fn render_pop_density(city_query: Query<(&MeshMaterial2d<ColorMaterial>, Ent
     /* First, compute the minimum and maximum province populations to adjust our range */
     let mut map: HashMap<Entity, u64> = HashMap::new();
     for pop in pop_query.iter(){
-        match map.get_mut(&pop.home){
+        match map.get_mut(&pop.home.unwrap()){
             None => {
-                map.insert(pop.home, pop.size as u64);
+                map.insert(pop.home.unwrap(), pop.size as u64);
             }
             Some(v) => {
                 *v += pop.size as u64;
@@ -44,7 +44,7 @@ pub fn render_pop_density(city_query: Query<(&MeshMaterial2d<ColorMaterial>, Ent
             let norm:f32 = pop as f32 / max as f32;
 
             /* Interpolate color */
-            let color = color_lerp(GRAY, GREEN, norm);
+            let color = color_lerp(GRAY, Srgba::rgb(0.0, 1.0, 0.0), norm);
 
             /* Color province */
             material.color = color;
