@@ -1,9 +1,8 @@
 use std::collections::HashMap;
-use bevy::color::palettes::basic::{GRAY, GREEN};
+use bevy::color::palettes::basic::{GRAY};
 use bevy::prelude::*;
 use crate::pops::pop::Pop;
 use crate::world::city::City;
-use crate::world::province::Province;
 
 /// Render the map colors as population density per province.
 pub fn render_pop_density(city_query: Query<(&MeshMaterial2d<ColorMaterial>, Entity), With<City>>,

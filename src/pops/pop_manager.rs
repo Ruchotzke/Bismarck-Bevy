@@ -26,7 +26,7 @@ impl Plugin for PopManagement {
         );
         app.add_systems(Update,
                 (
-                            // update_pops,
+                            update_pops,
                             handle_pop_adds,
                         )
         );
@@ -36,30 +36,30 @@ impl Plugin for PopManagement {
 pub fn initialize_pop_containers(mut commands: Commands, query: Query<Entity, With<City>>) {
     /* Add a pop container to all cities */
     for entity in query.iter(){
-        commands.entity(entity).insert((
+        commands.entity(entity).insert(
             PopContainer::new()
-        ));
+        );
     }
 }
 
 pub fn initialize_pops(query: Query<Entity, With<PopContainer>>, mut ev_addpop: EventWriter<AddPopEvent>){
     /* Add a population to the some random provinces. */
     let entity = query.iter().choose(&mut rand::rng()).unwrap();
-    let pop = Pop{size: 1500, home: None};
+    let pop = Pop{size: 1500, frac_size: 0.0, home: None};
     ev_addpop.send(AddPopEvent{
         pop: pop.clone(),
         to_container: entity,
     });
 
     let entity = query.iter().choose(&mut rand::rng()).unwrap();
-    let pop = Pop{size: 800, home: None};
+    let pop = Pop{size: 800, frac_size: 0.0, home: None};
     ev_addpop.send(AddPopEvent{
         pop: pop.clone(),
         to_container: entity,
     });
 
     let entity = query.iter().choose(&mut rand::rng()).unwrap();
-    let pop = Pop{size: 200, home: None};
+    let pop = Pop{size: 200, frac_size: 0.0, home: None};
     ev_addpop.send(AddPopEvent{
         pop: pop.clone(),
         to_container: entity,
@@ -67,48 +67,46 @@ pub fn initialize_pops(query: Query<Entity, With<PopContainer>>, mut ev_addpop: 
 
 }
 
-pub fn update_pops(mut pops: Query<(Entity, &mut Pop)>,
+pub fn update_pops(mut commands: Commands,
+                   mut pops: Query<(Entity, &mut Pop)>,
                    mut cities: Query<(Entity, &mut PopContainer, &ProvinceNeighbors)>,
                    time: Res<Time>,
                    mut ev_addpop: EventWriter<AddPopEvent>
 ) {
     for(entity, mut pop) in pops.iter_mut() {
         /* Get this pop's neighbor information */
-        let (_, container, neighbors) = cities.get_mut(pop.home.unwrap()).unwrap();
+        let (_, mut container, neighbors) = cities.get_mut(pop.home.unwrap()).unwrap();
 
         /* Compute the amount of pop to reduce here */
-        let reduction: u32 = (pop.size as f32 * 0.4 * time.delta_secs().ceil()) as u32;
+        let reduction: f32 = (pop.size as f32 + pop.frac_size) * 0.4 * time.delta_secs();
 
         /* Distribute reduction between all neighbors */
-        let delta: u32 = (reduction / neighbors.prov_neighbors.len() as u32);
+        let delta: f32 = reduction / neighbors.prov_neighbors.len() as f32;
 
         /* Reduce population */
-        pop.size -= reduction;
+        pop.reduce_population(reduction);
 
         /* If pop is zero, delete it and remove the reference from the list */
-        // if pop.size == 0 {
-        //     commands.entity(entity).despawn();
-        //     let index = container.pops.iter().position(|x| *x == pop.home.unwrap()).unwrap();
-        //     container.pops.remove(index);
-        // }
-
-        /* Create a pop at all neighbors */
-        for neighbor in neighbors.prov_neighbors.iter() {
-            let pop = Pop{size: delta, home: None};
-
-            // let (e, mut nc, _) = cities.get_mut(*neighbor).unwrap();
-            // ev_addpop.send(AddPopEvent{
-            //     pop,
-            //     to_container: e,
-            // });
+        if pop.size <= 0 {
+            commands.entity(entity).despawn();
+            let index = container.pops.iter().position(|x| *x == entity).unwrap();
+            container.pops.remove(index);
         }
+
+        /* Create a pop at a random neighbor */
+        let neighbor = neighbors.prov_neighbors.iter().choose(&mut rand::rng()).unwrap();
+        let pop = Pop{size: reduction as u32, frac_size: delta.fract(), home: None};
+        ev_addpop.send(AddPopEvent{
+            pop: pop.clone(),
+            to_container: *neighbor,
+        });
     }
 }
 
 fn handle_pop_adds(
     mut commands: Commands,
     mut ev_addpop: EventReader<AddPopEvent>,
-    mut query: Query<(&mut PopContainer)>,
+    mut query: Query<&mut PopContainer>,
     mut pops: Query<&mut Pop>
 ) {
     for mut ev in ev_addpop.read() {
